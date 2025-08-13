@@ -30,8 +30,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sprintf/sprintf.dart';
 import 'package:uri_to_file/uri_to_file.dart';
 import 'package:intl/intl.dart' hide TextDirection;
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:video_compress/video_compress.dart';
+import 'dart:io' as io; // alias to avoid conflicts
 
 class IntervalDo {
   DateTime? last;
@@ -990,19 +991,29 @@ class IMUtils {
 
   static void saveImage(BuildContext ctx, String url) async {
     EasyLoading.show(dismissOnTap: true);
-    final imageFile = await getCachedImageFile(url);
+    try {
+      if (kIsWeb) {
+        // Web: don’t touch dart:io. Just download the URL instead.
+        await HttpUtil.saveUrlPicture(url, onCompletion: () {});
+        return;
+      }
 
-    if (imageFile != null) {
-      await HttpUtil.saveFileToGallerySaver(
-        imageFile,
-        name: url.split('/').last,
-      );
+      final imageFile = await getCachedImageFile(url);
 
-      EasyLoading.dismiss();
-    } else {
-      HttpUtil.saveUrlPicture(url, onCompletion: () {
+      if (imageFile != null) {
+        await HttpUtil.saveFileToGallerySaver(
+          imageFile as io.File,
+          name: url.split('/').last,
+        );
+
         EasyLoading.dismiss();
-      });
+      } else {
+        HttpUtil.saveUrlPicture(url, onCompletion: () {
+          EasyLoading.dismiss();
+        });
+      }
+    } finally {
+      EasyLoading.dismiss();
     }
   }
 

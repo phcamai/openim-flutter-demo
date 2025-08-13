@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' as io show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/cupertino.dart';
@@ -16,7 +17,7 @@ import 'photo_browser_hero.dart';
 class MediaSource {
   final String? url;
   final String thumbnail;
-  final File? file;
+  final Object? file;
   final bool isVideo;
   final String? tag;
 
@@ -127,10 +128,21 @@ class _MediaBrowserState extends State<MediaBrowser> with TickerProviderStateMix
 
               return s.isVideo
                   ? ExtendedImageSlidePageHandler(
-                      child: VideoPlayerView(
+                      child: !kIsWeb &&
+                      s.file is io.File &&
+                      (s.file as io.File).existsSync()
+                      ? VideoPlayerView(
                         url: s.url,
                         coverUrl: s.thumbnail,
-                        file: s.file,
+                        file: s.file as io.File,
+                        heroTag: s.tag,
+                        autoPlay: widget.onAutoPlay?.call(index) ?? false,
+                        muted: widget.muted,
+                        onDownload: (url, file) => widget.onSave?.call(currentIndex),
+                      )
+                      : VideoPlayerView(
+                        url: s.url,
+                        coverUrl: s.thumbnail,
                         heroTag: s.tag,
                         autoPlay: widget.onAutoPlay?.call(index) ?? false,
                         muted: widget.muted,
@@ -158,9 +170,11 @@ class _MediaBrowserState extends State<MediaBrowser> with TickerProviderStateMix
                       tag: s.tag ?? s.thumbnail,
                       slideType: SlideType.onlyImage,
                       slidePagekey: slidePagekey,
-                      child: s.file != null && s.file!.existsSync()
+                      child: !kIsWeb &&
+                        s.file is io.File &&
+                              (s.file as io.File).existsSync()
                           ? ExtendedImage.file(
-                              s.file!,
+                              s.file as dynamic,
                               enableSlideOutPage: true,
                               fit: BoxFit.contain,
                               mode: ExtendedImageMode.gesture,
@@ -254,12 +268,12 @@ class VideoPlayerView extends StatefulWidget {
   });
   final String? path;
   final String? url;
-  final File? file;
+  final io.File? file;
   final String? coverUrl;
   final String? heroTag;
   final bool autoPlay;
   final bool muted;
-  final Function(String? url, File? file)? onDownload;
+  final Function(String? url, io.File? file)? onDownload;
   @override
   State<VideoPlayerView> createState() => _VideoPlayerViewState();
 }

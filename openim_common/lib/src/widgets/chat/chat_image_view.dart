@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
@@ -6,8 +7,8 @@ import 'package:flutter/material.dart';
 class ThumbnailViewer extends StatefulWidget {
   final String? thumbnailUrl;
   final String? imageUrl;
-  final File? thumbnailFile;
-  final File? imageFile;
+  final Object? thumbnailFile;
+  final Object? imageFile;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -28,9 +29,13 @@ class _ThumbnailViewerState extends State<ThumbnailViewer> {
       child: Center(
         child: showThumbnail
             ? (widget.thumbnailFile != null
-                ? ExtendedImage.file(
-                    widget.thumbnailFile!,
+              ? (
+                  kIsWeb
+                    ? ExtendedImage.network(widget.thumbnailUrl ?? '')
+                    : ExtendedImage.file(
+                        widget.thumbnailFile as dynamic,
                   )
+              )
                 : ExtendedImage.network(
                     widget.thumbnailUrl!,
                     fit: BoxFit.cover,
@@ -43,11 +48,16 @@ class _ThumbnailViewerState extends State<ThumbnailViewer> {
                       return null;
                     },
                   ))
-            : (widget.imageFile != null
-                ? ExtendedImage.file(widget.imageFile!)
-                : ExtendedImage.network(
-                    widget.imageUrl!,
-                  )),
+            :(
+                // On web -> never call .file; fall back to URL
+                kIsWeb
+                  ? ExtendedImage.network(widget.imageUrl ?? widget.thumbnailUrl ?? '')
+                  : (
+                      widget.imageFile is io.File
+                        ? ExtendedImage.file(widget.imageFile as dynamic)
+                        : ExtendedImage.network(widget.imageUrl ?? '')
+                    )
+            ),
       ),
     );
   }

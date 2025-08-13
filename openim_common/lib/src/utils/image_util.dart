@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:io' as io show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:extended_image/extended_image.dart';
 import 'package:flutter/material.dart';
@@ -90,7 +91,7 @@ class ImageUtil {
       );
 
   static Widget fileImage({
-    required File file,
+    required io.File file,
     double? width,
     double? height,
     int? cacheWidth,
@@ -101,9 +102,20 @@ class ImageUtil {
     bool lowMemory = false,
     Widget? errorWidget,
     BorderRadius? borderRadius,
-  }) =>
-      ExtendedImage.file(
-        file,
+  }) {
+      // On web, you should never call fileImage with a dart:io File.
+      // Return a placeholder (or switch your caller to use .memory/.network on web).
+      if (kIsWeb) {
+        assert(false, 'Do not call fileImage() on Web — use bytes (ExtendedImage.memory) or URL (ExtendedImage.network).');
+        return const SizedBox.shrink();
+      }
+
+      // On mobile, we still want ExtendedImage.file(...), but avoid static type checks
+      // by passing a dynamic. This compiles even though web's constructor expects a different File.
+      final dynamic f = file;
+
+      return ExtendedImage.file(
+        f, // dynamic to bypass compile‑time type mismatch
         width: width,
         height: height,
         fit: fit,
@@ -143,7 +155,7 @@ class ImageUtil {
           }
         },
       );
-
+  }
   static int? _calculateCacheWidth(
     double? width,
     int? cacheWidth,
